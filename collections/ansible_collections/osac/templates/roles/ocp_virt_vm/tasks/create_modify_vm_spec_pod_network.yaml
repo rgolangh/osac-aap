@@ -1,0 +1,24 @@
+---
+# Override for environments without Multus/CUDN (e.g., kind dev clusters).
+# Replaces the Multus network attachment with pod networking + masquerade.
+# Activate by setting in extra_vars:
+#   create_step_modify_vm_spec_override:
+#     name: osac.templates.ocp_virt_vm
+#     tasks_from: create_modify_vm_spec_pod_network.yaml
+
+- name: Replace Multus networking with pod network (kind/dev mode)
+  ansible.builtin.set_fact:
+    vm_template_spec: >-
+      {{ vm_template_spec | combine({
+           'networks': [{'name': 'default', 'pod': {}}],
+           'domain': vm_template_spec.domain | combine({
+             'devices': vm_template_spec.domain.devices | combine({
+               'interfaces': [{'name': 'default', 'masquerade': {}}]
+             })
+           })
+         }, recursive=True)
+      }}
+
+- name: Show modified network config
+  ansible.builtin.debug:
+    msg: "Using pod network with masquerade (no Multus/CUDN)"
